@@ -1,0 +1,21 @@
+usr_type_num: 8
+usr_emb_dim: 128
+usr_feature_dim: 34
+act_num: 10
+act_emb_dim: 128
+time_slot_num: 48
+time_emb_dim: 64
+week_emb_dim: 64
+hidden_size: 256
+rnn_layers: 4
+dropout: 0.1
+
+lr: 1.0e-5
+epoch_num: 1000
+batch_size: 64
+#batch_size: 1
+
+time_weight: 0.8
+
+max_norm: 1.0
+norm_type: 2.0
