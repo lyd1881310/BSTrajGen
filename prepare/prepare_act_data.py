@@ -29,45 +29,9 @@ def calc_utm_epsg(lon, lat):
     return int(epsg_code)
 
 
-def resample_act_traj(dataset):
-    top_percent = 0.2
-    repeat_num = 3
-    data_dir = 'cleared_data'
-    traj_df = pd.read_csv(join(data_dir, dataset, 'traj.csv'))
-    usr_groups = traj_df.groupby('usr_id')
-    usr_info = []
-    for usr_id, group in usr_groups:
-        act_freq = {
-            act: count / len(group)
-            for act, count in group['act'].value_counts().to_dict().items()
-        }
-        usr_info.append({
-            'usr_id': usr_id,
-            'residential': act_freq.get('residential', 0),
-            'office': act_freq.get('office', 0),
-            'checkin_num': len(group)
-        })
-    usr_info_df = pd.DataFrame(usr_info)
-    usr_info_df['sum'] = usr_info_df['residential'] + usr_info_df['office']
-    usr_info_df = usr_info_df.sort_values(by=['sum'], ascending=False)
-    top_usr_ids = usr_info_df.head(n=int(len(usr_info_df) * top_percent))['usr_id'].tolist()
-
-    tid = 0
-    traj_dfs = []
-    for ori_tid, tdf in traj_df.groupby('traj_id'):
-        usr_id = tdf.iloc[0]['usr_id']
-        traj_count = repeat_num if usr_id in top_usr_ids else 1
-        for _ in range(traj_count):
-            tdf['traj_id'] = tid
-            traj_dfs.append(tdf.copy())
-            tid += 1
-    resample_df = pd.concat(traj_dfs)
-    resample_df.to_csv(join(data_dir, dataset, 'traj_resample.csv'), index=False)
-
-
 def split_train_data(dataset):
     data_dir = 'cleared_data'
-    traj_df = pd.read_csv(join(data_dir, dataset, 'traj_resample.csv'))
+    traj_df = pd.read_csv(join(data_dir, dataset, 'resample_traj.csv'))
     total_ids = traj_df['traj_id'].tolist()
     random.shuffle(total_ids)
 
@@ -199,5 +163,5 @@ def prepare_fsq_global():
 if __name__ == '__main__':
     # prepare_fsq_global_poi()
     # prepare_fsq_global()
-    resample_act_traj('fsq_global')
+    # resample_act_traj('fsq_global')
     split_train_data('fsq_global')

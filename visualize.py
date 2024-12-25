@@ -205,6 +205,38 @@ def visualize_work_act_traj():
         group.to_csv(join(save_dir, f'{usr_id}_work_traj.csv'), index=False)
 
 
+def visualize_usr(dataset):
+    data_dir = 'cleared_data'
+    save_dir = join(data_dir, dataset, 'visual')
+    os.makedirs(save_dir, exist_ok=True)
+
+    usr_df = pd.read_csv(join(data_dir, dataset, 'usr_feature.csv'))
+    # feat_cols = [col for col in usr_df.columns if col != 'usr_id' and col != 'label' and not any(char.isdigit() for char in col)]
+    feat_cols = [col for col in usr_df.columns if any(char.isdigit() for char in col)]
+
+    plt.rcParams.update({'font.size': 10})
+    # 创建 2 行 4 列的子图布局，并设置图像大小
+    fig, axes = plt.subplots(2, 4, figsize=(16, 12))
+    for idx, (usr_label, group) in enumerate(usr_df.groupby('label')):
+        ax = axes.flat[idx]
+        feat_val = {col: group[col].mean() for col in feat_cols}
+        keys = list(feat_val.keys())
+        vals = list(feat_val.values())
+        ax.bar(keys, vals, color='skyblue')  # 绘制柱状图
+        ax.set_title(f"User {idx}", fontsize=16)
+        # ax.set_xlabel("Categories", fontsize=12)
+        ax.set_ylabel("TF-IDF", fontsize=12)
+        ax.set_xticks(range(len(keys)))
+        ax.set_xticklabels(keys, rotation=45, ha='right')
+
+        # 设置纵横比，使每个子图的纵轴比例合适
+        ax.set_aspect(aspect='auto')  # 可以尝试 'equal' 或具体比例值
+
+    # 调整布局，减少列间距，增加行间距
+    plt.subplots_adjust(left=0.05, right=0.95, top=0.9, bottom=0.2, hspace=0.4, wspace=0.2)
+    plt.savefig(join(save_dir, 'usr_feature_time.pdf'), format='pdf')
+
+
 if __name__ == '__main__':
     # visual_act_traj()
     # visual_compare_values()

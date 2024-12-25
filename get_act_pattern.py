@@ -8,8 +8,11 @@ from tqdm import tqdm
 
 
 def get_return_prob():
+    """
+    计算 checkin 数据中的返回-探索概率 (空间规律)
+    """
     data_dir = 'cleared_data/fsq_global'
-    traj_df = pd.read_csv(join(data_dir, 'traj_resample.csv'))
+    traj_df = pd.read_csv(join(data_dir, 'resample_traj.csv'))
     act_to_id = yaml.safe_load(open('cleared_data/activity_id.yaml', 'r'))
 
     def get_return_act(tdf: pd.DataFrame):
@@ -29,16 +32,49 @@ def get_return_prob():
     traj_df = pd.concat(usr_dfs)
 
     act_groups = traj_df.groupby('act')
+    act_return_prob = {
+        act: np.sum(group['is_return']) / len(group)
+        for act, group in act_groups
+    }
+
+    # 约束条件: 关注驻留倾向高的活动
+    act_return_prob['residential'] = max(act_return_prob['residential'], 0.98)
+    act_return_prob['office'] = max(act_return_prob['office'], 0.92)
+    act_return_prob['education'] = max(act_return_prob['education'], 0.95)
+
     return_prob = [
         {
             'act': act,
             'act_id': act_to_id[act],
-            'return_prob': np.sum(group['is_return']) / len(group)
+            'return_prob': prob
         }
-        for act, group in act_groups
+        for act, prob in act_return_prob.items()
     ]
     pd.DataFrame(return_prob).to_csv(join(data_dir, 'return_prob.csv'), index=False)
 
 
+def get_time_slot_distri():
+    """
+    计算活动的时间分布规律
+    """
+    data_dir = 'cleared_data/fsq_global'
+    traj_df = pd.read_csv(join(data_dir, 'resample_traj.csv'))
+    traj_df['is_weekend'] = traj_df['weekday'].apply(lambda day: day > 4)
+
+    weekday_df = traj_df[~traj_df['is_weekend']]
+    weekend_df = traj_df[traj_df['is_weekend']]
+
+    def get_time_distri(tdf):
+        counts = tdf.groupby(by=['act_id', 'time_slot']).size().unstack(fill_value=0)
+        counts = counts.div(counts.sum(axis=1), axis=0)
+        return counts.to_numpy()
+
+    weekday_distri = get_time_distri(weekday_df)
+    weekend_distri = get_time_distri(weekend_df)
+    np.save(join(data_dir, 'weekday_distri.npy'), weekday_distri)
+    np.save(join(data_dir, 'weekend_distri.npy'), weekend_distri)
+
+
 if __name__ == '__main__':
     get_return_prob()
+    get_time_slot_distri()

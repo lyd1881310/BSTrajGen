@@ -3,3 +3,5 @@ ori_data/
 ckpt/
 visual/
 .idea/
+analyze_data.py
+try.py

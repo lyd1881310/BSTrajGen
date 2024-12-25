@@ -1,3 +1,5 @@
+import random
+
 import pandas as pd
 import numpy as np
 from os.path import join
@@ -53,52 +55,4 @@ class TemporalGenerator:
             max_t = t - 1
         time_list = list(reversed(time_list))
         return time_list
-
-
-def prepare_time_distri():
-    data_dir = 'cleared_data/fsq_global'
-    traj_df = pd.read_csv(join(data_dir, 'traj.csv'))
-    traj_df['is_weekend'] = traj_df['weekday'].apply(lambda day: day > 4)
-
-    weekday_df = traj_df[~traj_df['is_weekend']]
-    weekend_df = traj_df[traj_df['is_weekend']]
-
-    def get_time_distri(tdf):
-        counts = tdf.groupby(by=['act_id', 'time_slot']).size().unstack(fill_value=0)
-        counts = counts.div(counts.sum(axis=1), axis=0)
-        return counts.to_numpy()
-
-    weekday_distri = get_time_distri(weekday_df)
-    weekend_distri = get_time_distri(weekend_df)
-    np.save(join(data_dir, 'weekday_distri.npy'), weekday_distri)
-    np.save(join(data_dir, 'weekend_distri.npy'), weekend_distri)
-
-
-def run_time_generate():
-    top_k = 7
-    data_dir = 'cleared_data/fsq_global'
-    exp_dir = 'ckpt/exp_2'
-    gen_df = pd.read_csv(join(exp_dir, 'actgen_generate.csv'))
-    weekday_distri = np.load(join(data_dir, 'weekday_distri.npy'))
-    weekend_distri = np.load(join(data_dir, 'weekend_distri.npy'))
-    generator = TemporalGenerator(weekday_distri=weekday_distri, weekend_distri=weekend_distri, top_k=top_k)
-
-    gen_dfs = []
-    traj_groups = gen_df.groupby('traj_id')
-    for traj_id, group in tqdm(traj_groups, total=len(traj_groups)):
-        tdf = group.copy()
-        # is_weekend = tdf.iloc[0]['weekday'] > 4
-        is_weekend = False
-        act_list = tdf['act_id'].tolist()
-        if len(act_list) > 48:
-            continue
-        tdf['time_slot'] = generator.generate(act_list=act_list, is_weekend=is_weekend)
-        gen_dfs.append(tdf)
-    gen_df = pd.concat(gen_dfs)
-    gen_df.to_csv(join(exp_dir, f'temporal_gen_{top_k}.csv'), index=False)
-
-
-if __name__ == '__main__':
-    # prepare_time_distri()
-    run_time_generate()
 
